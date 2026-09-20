@@ -10,13 +10,18 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class AuthService {
+
     private final UserRepository users;
     private final PasswordEncoder encoder;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
 
-    public AuthService(UserRepository users, PasswordEncoder encoder,
-                       AuthenticationManager authenticationManager, JwtService jwtService) {
+    public AuthService(
+            UserRepository users,
+            PasswordEncoder encoder,
+            AuthenticationManager authenticationManager,
+            JwtService jwtService) {
+
         this.users = users;
         this.encoder = encoder;
         this.authenticationManager = authenticationManager;
@@ -24,23 +29,43 @@ public class AuthService {
     }
 
     public AuthResponse register(RegisterRequest request) {
+
         if (users.existsByEmailIgnoreCase(request.email())) {
             throw new IllegalArgumentException("Email is already registered");
         }
-        User user = User.builder()
-                .name(request.name().trim())
-                .email(request.email().trim().toLowerCase())
-                .password(encoder.encode(request.password()))
-                .build();
+
+        User user = new User(
+                request.name().trim(),
+                request.email().trim().toLowerCase(),
+                encoder.encode(request.password())
+        );
+
         user = users.save(user);
-        return new AuthResponse(jwtService.generateToken(user.getEmail()), user.getName(), user.getEmail());
+
+        return new AuthResponse(
+                jwtService.generateToken(user.getEmail()),
+                user.getName(),
+                user.getEmail()
+        );
     }
 
     public AuthResponse login(LoginRequest request) {
+
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.email(), request.password()));
+                new UsernamePasswordAuthenticationToken(
+                        request.email(),
+                        request.password()
+                )
+        );
+
         User user = users.findByEmailIgnoreCase(request.email())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        return new AuthResponse(jwtService.generateToken(user.getEmail()), user.getName(), user.getEmail());
+                .orElseThrow(() ->
+                        new IllegalArgumentException("User not found"));
+
+        return new AuthResponse(
+                jwtService.generateToken(user.getEmail()),
+                user.getName(),
+                user.getEmail()
+        );
     }
 }
